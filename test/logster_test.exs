@@ -945,6 +945,22 @@ defmodule Logster.Test do
       assert {:headers, %{"host" => "example.com", "accept" => "text/html"}} in fields
     end
 
+    @tag with_config: [filter_headers: ["content-type"]]
+    test "adds all the headers excluding specified" do
+      fields =
+        %Plug.Conn{
+          state: :set_chunked,
+          req_headers: [
+            {"content-type", "application/json"},
+            {"host", "example.com"},
+            {"accept", "text/html"}
+          ]
+        }
+        |> Logster.get_conn_fields(0)
+
+      assert {:headers, %{"host" => "example.com", "accept" => "text/html"}} in fields
+    end
+
     @tag with_config: [extra_fields: [:host]]
     test "includes host when enabled in config" do
       fields =
