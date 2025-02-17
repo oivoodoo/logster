@@ -123,6 +123,7 @@ defmodule Logster do
       extra_fields: Application.get_env(:logster, :extra_fields, []),
       excludes: Application.get_env(:logster, :excludes, []),
       renames: Application.get_env(:logster, :renames, []),
+      filter_headers: Application.get_env(:logster, :filter_headers, []),
       filter_parameters:
         Application.get_env(:logster, :filter_parameters, @default_filter_parameters)
     }
@@ -165,6 +166,7 @@ defmodule Logster do
     # add items in reverse order of how we want them to appear in the log message.
     []
     |> maybe_put_duration(duration_us, log_config)
+    |> maybe_put_filter_headers(conn, log_config)
     |> maybe_put_headers(conn, log_config)
     |> maybe_put_status(conn, log_config)
     |> maybe_put_query(conn, log_config)
@@ -189,6 +191,17 @@ defmodule Logster do
   defp format_duration(duration) do
     microseconds = duration |> System.convert_time_unit(:native, :microsecond)
     microseconds / 1000
+  end
+
+  defp maybe_put_filter_headers(fields, _conn, %{filter_headers: []}), do: fields
+
+  defp maybe_put_filter_headers(fields, conn, %{filter_headers: filter_headers}) do
+    headers =
+      conn.req_headers
+      |> Enum.reject(fn {k, _} -> Enum.member?(filter_headers, k) end)
+      |> Enum.into(%{}, fn {k, v} -> {k, v} end)
+
+    fields |> Keyword.put(:headers, headers)
   end
 
   defp maybe_put_headers(fields, _conn, %{headers: []}), do: fields

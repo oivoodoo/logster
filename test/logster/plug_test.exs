@@ -282,4 +282,31 @@ defmodule Logster.PlugTest do
     refute headers["my-header-two"]
     refute headers["my-header-three"]
   end
+
+  @tag with_config: [filter_headers: ["my-header-one"]]
+  test "[String] log headers with filtering by key" do
+    message =
+      conn(:post, "/hello/world", [])
+      |> put_req_header("my-header-one", "test-value-1")
+      |> put_req_header("my-header-two", "test-value-2")
+      |> call_and_capture_log(MyPlug)
+
+    refute message =~ ~s("test-value-1")
+    assert message =~ ~s("test-value-2")
+  end
+
+  @tag with_config: [
+         headers: ["my-header-one", "my-header-two"],
+         filter_headers: ["my-header-one"]
+       ]
+  test "[String] log only specified headers even with filter_headers settings" do
+    message =
+      conn(:post, "/hello/world", [])
+      |> put_req_header("my-header-one", "test-value-1")
+      |> put_req_header("my-header-two", "test-value-2")
+      |> call_and_capture_log(MyPlug)
+
+    assert message =~ ~s("test-value-1")
+    assert message =~ ~s("test-value-2")
+  end
 end
